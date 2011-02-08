@@ -299,7 +299,7 @@ namespace Catch
             testEnded( m_currentResult );
 
             bool ok = m_currentResult.ok();
-            m_currentResult = MutableResultInfo();
+            m_currentResult = ResultInfo();
             if( ok )
                 return ResultAction::None;
             else if( shouldDebugBreak() )
@@ -310,9 +310,17 @@ namespace Catch
         }
 
         ///////////////////////////////////////////////////////////////////////////
+        virtual const ResultInfo& getCurrentResult
+        ()
+        const
+        {
+            return m_currentResult;
+        }
+
+        ///////////////////////////////////////////////////////////////////////////
         virtual void acceptExpression
         (
-            const MutableResultInfo& resultInfo
+            const ResultInfo& resultInfo
         )
         {
             m_currentResult = resultInfo;
@@ -454,7 +462,7 @@ namespace Catch
         
     private:
         RunningTest m_runningTest;
-        MutableResultInfo m_currentResult;
+        ResultInfo m_currentResult;
 
         const Config& m_config;
         std::size_t m_successes;

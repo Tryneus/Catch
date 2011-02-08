@@ -144,187 +144,6 @@ class DummyExceptionType_DontUse
 {
 };
     
-class MutableResultInfo : public ResultInfo
-{
-public:
-    
-    ///////////////////////////////////////////////////////////////////////////
-    MutableResultInfo
-    ()
-    {}
-    
-    ///////////////////////////////////////////////////////////////////////////
-    MutableResultInfo
-    (
-        const char* expr, 
-        bool isNot, 
-        const char* filename, 
-        std::size_t line, 
-        const char* macroName 
-    )
-    : ResultInfo( expr, ResultWas::Unknown, isNot, filename, line, macroName )
-    {
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void setResultType
-    (
-        ResultWas::OfType result
-    )
-    {
-        // Flip bool results if isNot is set
-        if( m_isNot && result == ResultWas::Ok )
-            m_result = ResultWas::ExpressionFailed;
-        else if( m_isNot && result == ResultWas::ExpressionFailed )
-            m_result = ResultWas::Ok;
-        else
-            m_result = result;        
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void setMessage
-    (
-        const std::string& message
-    )
-    {
-        m_message = message;
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    template<typename RhsT>
-    MutableResultInfo& operator ||
-    (
-        const RhsT&
-    )
-    {
-        m_expressionIncomplete = true;
-        return *this;
-    }
-        
-private:
-    friend class ResultBuilder;
-
-    ///////////////////////////////////////////////////////////////////////////
-    void setLhs
-    (
-        const std::string& lhs
-    )
-    {
-        m_lhs = lhs;
-    }    
-
-    ///////////////////////////////////////////////////////////////////////////
-    MutableResultInfo& setRhs
-    (
-        const std::string& op, 
-        const std::string& rhs 
-    )
-    {
-        m_op = op;
-        m_rhs = rhs;
-        return *this;
-    }    
-};
-    
-class ResultBuilder
-{
-public:
-
-    ///////////////////////////////////////////////////////////////////////////
-    ResultBuilder
-    (
-        const char* expr, 
-        bool isNot, 
-        const char* filename, 
-        std::size_t line, 
-        const char* macroName
-    )
-    : m_result( expr, isNot, filename, line, macroName )
-    {}
-    
-    ///////////////////////////////////////////////////////////////////////////
-    template<typename T>
-    ResultBuilder& operator->*
-    (
-        const T & operand
-    )
-    {
-        m_result.setLhs( toString( operand ) );
-        return *this;
-    }
-    
-    ///////////////////////////////////////////////////////////////////////////
-    template<typename RhsT>
-    MutableResultInfo& operator == 
-    (
-        const RhsT& rhs
-    )
-    {
-        return m_result.setRhs( "==", toString( rhs ) );
-    }    
-
-    ///////////////////////////////////////////////////////////////////////////
-    template<typename RhsT>
-    MutableResultInfo& operator != 
-    (
-        const RhsT& rhs
-    )
-    {
-        return m_result.setRhs( "!=", toString( rhs ) );
-    }    
-
-    ///////////////////////////////////////////////////////////////////////////
-    template<typename RhsT>
-    MutableResultInfo& operator < 
-    (
-        const RhsT& rhs
-    )
-    {
-        return m_result.setRhs( "<", toString( rhs ) );
-    }    
-
-    ///////////////////////////////////////////////////////////////////////////
-    template<typename RhsT>
-    MutableResultInfo& operator > 
-    (
-        const RhsT& rhs 
-    )
-    {
-        return m_result.setRhs( ">", toString( rhs ) );
-    }    
-
-    ///////////////////////////////////////////////////////////////////////////
-    template<typename RhsT>
-    MutableResultInfo& operator <= 
-    (
-        const RhsT& rhs
-    )
-    {
-        return m_result.setRhs( "<=", toString( rhs ) );
-    }    
-
-    ///////////////////////////////////////////////////////////////////////////
-    template<typename RhsT>
-    MutableResultInfo& operator >= 
-    (
-        const RhsT& rhs
-    )
-    {
-        return m_result.setRhs( ">=", toString( rhs ) );
-    }    
-
-    ///////////////////////////////////////////////////////////////////////////
-    operator MutableResultInfo&
-    ()
-    {
-        return m_result;
-    }
-    
-private:
-    MutableResultInfo m_result;
-    
-};
-
 class ScopedInfo
 {
 public:
@@ -436,6 +255,548 @@ inline bool isTrue
 {
     return value;
 }
+
+// Predeclarations for references in ChunkEvaluator and ReverseChunkEvaluator
+class ResultBuilder;
+class ReverseResultBuilder;
+
+template<typename OperandT>
+class ReverseChunkEvaluator
+{
+public:
+    ///////////////////////////////////////////////////////////////////////////
+    ReverseChunkEvaluator
+    (
+        const ReverseResultBuilder& parent,
+        const OperandT& operand,
+        bool result
+    );
+
+    ///////////////////////////////////////////////////////////////////////////
+    const OperandT& getOperand
+    ()
+    const
+    {
+        return m_operand;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    ReverseResultBuilder& getParent
+    ()
+    const
+    {
+        return m_parent;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    bool getResult
+    ()
+    const
+    {
+        return m_result;
+    }
+
+private:
+    const OperandT& m_operand;
+    ReverseResultBuilder& m_parent;
+    bool m_result;
+};
+
+template<typename OperandT>
+class ChunkEvaluator
+{
+public:
+    // These functions are implemented following the ResultBuilder definition
+    ChunkEvaluator(ResultBuilder& parent, const OperandT& operand, bool result);
+
+    // Terminal cases
+    ResultBuilder& operator << ( const ReverseResultBuilder& rhs );
+
+    template<typename RhsT>
+    ResultBuilder& operator || ( const ReverseChunkEvaluator<RhsT>& rhs);
+
+    template<typename RhsT>
+    ResultBuilder& operator && ( const ReverseChunkEvaluator<RhsT>& rhs);
+
+    template<typename RhsT>
+    ResultBuilder& operator == ( const ReverseChunkEvaluator<RhsT>& rhs );
+
+    template<typename RhsT>
+    ResultBuilder& operator != ( const ReverseChunkEvaluator<RhsT>& rhs );
+
+    template<typename RhsT>
+    ResultBuilder& operator < ( const ReverseChunkEvaluator<RhsT>& rhs );
+
+    template<typename RhsT>
+    ResultBuilder& operator > ( const ReverseChunkEvaluator<RhsT>& rhs );
+
+    template<typename RhsT>
+    ResultBuilder& operator <= ( const ReverseChunkEvaluator<RhsT>& rhs );
+
+    template<typename RhsT>
+    ResultBuilder& operator >= ( const ReverseChunkEvaluator<RhsT>& rhs );
+
+    // Forward expression evaluation
+    template<typename RhsT>
+    ChunkEvaluator<RhsT> operator || ( const RhsT& rhs );
+
+    template<typename RhsT>
+    ChunkEvaluator<RhsT> operator && ( const RhsT& rhs );
+
+    template<typename RhsT>
+    ChunkEvaluator<RhsT> operator == ( const RhsT& rhs );
+
+    template<typename RhsT>
+    ChunkEvaluator<RhsT> operator != ( const RhsT& rhs );
+
+    template<typename RhsT>
+    ChunkEvaluator<RhsT> operator < ( const RhsT& rhs );
+
+    template<typename RhsT>
+    ChunkEvaluator<RhsT> operator > ( const RhsT& rhs );
+
+    template<typename RhsT>
+    ChunkEvaluator<RhsT> operator <= ( const RhsT& rhs );
+
+    template<typename RhsT>
+    ChunkEvaluator<RhsT> operator >= ( const RhsT& rhs );
+
+    operator ResultBuilder&();
+
+private:
+    const OperandT& m_operand;
+    ResultBuilder& m_parent;
+    bool m_result;
+};
+
+class ReverseResultBuilder
+{
+public:
+    void append
+    (
+        const std::string& exprChunk
+    )
+    {
+        m_exprString = exprChunk + m_exprString;
+    }
+
+    const std::string& getExprString
+    ()
+    const
+    {
+        return m_exprString;
+    }
+
+private:
+    std::string m_exprString;
+};
+
+class ResultBuilder : public ResultInfo
+{
+public:
+    ///////////////////////////////////////////////////////////////////////////
+    ResultBuilder
+    (
+        const char* expr,
+        bool isNot,
+        const char* filename,
+        std::size_t line,
+        const char* macroName
+    )
+    : ResultInfo( expr, ResultWas::Unknown, isNot, filename, line, macroName ),
+      m_incomplete(false)
+    {}
+
+    ///////////////////////////////////////////////////////////////////////////
+    template<typename LhsT>
+    ChunkEvaluator<LhsT> operator <<
+    (
+        const LhsT& lhs
+    )
+    {
+        return ChunkEvaluator<LhsT>(*this, lhs, true);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    void setIncomplete
+    ()
+    {
+      m_incomplete = true;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    void setResult
+    (
+        bool exprResult,
+        const std::string& reverseExprString
+    )
+    {
+        setResultData(exprResult);
+
+        if(!m_incomplete)
+          setExpressionString(m_exprString + reverseExprString);
+        else
+          setExpressionString(m_exprString + reverseExprString + " {can't expand the rest of the expression - consider rewriting it}");
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    void append
+    (
+        const std::string& exprChunk
+    )
+    {
+        m_exprString += exprChunk;
+    }
+
+private:
+    std::string m_exprString;
+    bool m_incomplete;
+};
+
+// Chunk evaluator function definitions are outside the class since they make callbacks to the ResultBuilders
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename OperandT>
+ChunkEvaluator<OperandT>::ChunkEvaluator
+(
+ResultBuilder& parent,
+ const OperandT& operand,
+ bool result
+) :
+    m_operand(operand),
+    m_parent(parent),
+    m_result(result)
+{
+    m_parent.append( toString(operand) );
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename OperandT>
+ReverseChunkEvaluator<OperandT>::ReverseChunkEvaluator
+(
+const ReverseResultBuilder& parent,
+ const OperandT& operand,
+ bool result
+) :
+    m_operand(operand),
+    m_parent(const_cast<ReverseResultBuilder&>(parent)), // Don't do this at home, kids
+    m_result(result)
+{
+    m_parent.append( toString(operand) );
+}
+
+//Terminal cases, where the chunk evaluators meet
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename OperandT>
+ChunkEvaluator<OperandT>::operator ResultBuilder&
+()
+{
+  m_parent.setResult(m_result, "");
+  return m_parent;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename OperandT>
+ResultBuilder& ChunkEvaluator<OperandT>::operator <<
+(
+    const ReverseResultBuilder& rhs
+)
+{
+    // rhs is unused because if we hit this operator, rhs never did anything
+    m_parent.setResult(m_result, rhs.getExprString());
+    return m_parent;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename OperandT>
+template<typename RhsT>
+ResultBuilder& ChunkEvaluator<OperandT>::operator ==
+(
+    const ReverseChunkEvaluator<RhsT>& rhs
+)
+{
+    m_parent.append(" == ");
+    m_parent.setResult(m_result == rhs.getResult(), rhs.getParent().getExprString());
+    return m_parent;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename OperandT>
+template<typename RhsT>
+ResultBuilder& ChunkEvaluator<OperandT>::operator !=
+(
+    const ReverseChunkEvaluator<RhsT>& rhs
+)
+{
+    m_parent.append(" != ");
+    m_parent.setResult(m_result != rhs.getResult(), rhs.getParent().getExprString());
+    return m_parent;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename OperandT>
+template<typename RhsT>
+ResultBuilder& ChunkEvaluator<OperandT>::operator <
+(
+    const ReverseChunkEvaluator<RhsT>& rhs
+)
+{
+    m_parent.append(" < ");
+    m_parent.setResult(m_result < rhs.getResult(), rhs.getParent().getExprString());
+    return m_parent;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename OperandT>
+template<typename RhsT>
+ResultBuilder& ChunkEvaluator<OperandT>::operator >
+(
+    const ReverseChunkEvaluator<RhsT>& rhs
+)
+{
+    m_parent.append(" > ");
+    m_parent.setResult(m_result > rhs.getResult(), rhs.getParent().getExprString());
+    return m_parent;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename OperandT>
+template<typename RhsT>
+ResultBuilder& ChunkEvaluator<OperandT>::operator <=
+(
+    const ReverseChunkEvaluator<RhsT>& rhs
+)
+{
+    m_parent.append(" <= ");
+    m_parent.setResult(m_result <= rhs.getResult(), rhs.getParent().getExprString());
+    return m_parent;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename OperandT>
+template<typename RhsT>
+ResultBuilder& ChunkEvaluator<OperandT>::operator >=
+(
+    const ReverseChunkEvaluator<RhsT>& rhs
+)
+{
+    m_parent.append(" >= ");
+    m_parent.setResult(m_result >= rhs.getResult(), rhs.getParent().getExprString());
+    return m_parent;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename OperandT>
+template<typename RhsT>
+ResultBuilder& ChunkEvaluator<OperandT>::operator ||
+(
+    const ReverseChunkEvaluator<RhsT>& rhs
+)
+{
+    m_parent.append(" || ");
+    m_parent.setResult(m_result || rhs.getResult(), rhs.getParent().getExprString());
+    return m_parent;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename OperandT>
+template<typename RhsT>
+ResultBuilder& ChunkEvaluator<OperandT>::operator &&
+(
+    const ReverseChunkEvaluator<RhsT>& rhs
+)
+{
+    m_parent.append(" && ");
+    m_parent.setResult(m_result && rhs.getResult(), rhs.getParent().getExprString());
+    return m_parent;
+}
+
+// Operators for consuming from the left (forward chunk evaluation)
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename OperandT>
+template<typename RhsT>
+ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator ||
+(
+    const RhsT& rhs
+)
+{
+    m_parent.append(" || ");
+    m_parent.setIncomplete();
+    return ChunkEvaluator<RhsT>(m_parent, rhs, m_result || rhs);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename OperandT>
+template<typename RhsT>
+ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator &&
+(
+    const RhsT& rhs
+)
+{
+    m_parent.append(" && ");
+    m_parent.setIncomplete();
+    return ChunkEvaluator<RhsT>(m_parent, rhs, m_result && rhs);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename OperandT>
+template<typename RhsT>
+ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator ==
+(
+    const RhsT& rhs
+)
+{
+    m_parent.append(" == ");
+    return ChunkEvaluator<RhsT>(m_parent, rhs, m_result && (m_operand == rhs));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename OperandT>
+template<typename RhsT>
+ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator !=
+(
+    const RhsT& rhs
+)
+{
+    m_parent.append(" != ");
+    return ChunkEvaluator<RhsT>(m_parent, rhs, m_result && (m_operand != rhs));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename OperandT>
+template<typename RhsT>
+ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator <
+(
+    const RhsT& rhs
+)
+{
+    m_parent.append(" < ");
+    return ChunkEvaluator<RhsT>(m_parent, rhs, m_result && (m_operand < rhs));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename OperandT>
+template<typename RhsT>
+ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator >
+(
+    const RhsT& rhs
+)
+{
+    m_parent.append(" > ");
+    return ChunkEvaluator<RhsT>(m_parent, rhs, m_result && (m_operand > rhs));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename OperandT>
+template<typename RhsT>
+ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator <=
+(
+    const RhsT& rhs
+)
+{
+    m_parent.append(" <= ");
+    return ChunkEvaluator<RhsT>(m_parent, rhs, m_result && (m_operand <= rhs));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename OperandT>
+template<typename RhsT>
+ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator >=
+(
+    const RhsT& rhs
+)
+{
+    m_parent.append(" >= ");
+    return ChunkEvaluator<RhsT>(m_parent, rhs, m_result && (m_operand >= rhs));
+}
+
+// Operators for consuming from the right (reverse chunk evaluaton)
+// Initial ChunkEvaluator creation
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename RhsT>
+ReverseChunkEvaluator<RhsT> operator <<
+(
+    const RhsT& rhs,
+    const ReverseResultBuilder& rev
+)
+{
+    return ReverseChunkEvaluator<RhsT>(rev, rhs, true);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename LhsT, typename RhsT>
+ReverseChunkEvaluator<LhsT> operator ==
+(
+    const LhsT& lhs,
+    const ReverseChunkEvaluator<RhsT>& rhs
+)
+{
+    rhs.getParent().append(" == ");
+    return ReverseChunkEvaluator<RhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs == rhs.getOperand()));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename LhsT, typename RhsT>
+ReverseChunkEvaluator<LhsT> operator !=
+(
+    const LhsT& lhs,
+    const ReverseChunkEvaluator<RhsT>& rhs
+)
+{
+    rhs.getParent().append(" != ");
+    return ReverseChunkEvaluator<RhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs != rhs.getOperand()));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename LhsT, typename RhsT>
+ReverseChunkEvaluator<LhsT> operator <
+(
+    const LhsT& lhs,
+    const ReverseChunkEvaluator<RhsT>& rhs
+)
+{
+    rhs.getParent().append(" < ");
+    return ReverseChunkEvaluator<RhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs < rhs.getOperand()));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename LhsT, typename RhsT>
+ReverseChunkEvaluator<LhsT> operator >
+(
+    const LhsT& lhs,
+    const ReverseChunkEvaluator<RhsT>& rhs
+)
+{
+    rhs.getParent().append(" > ");
+    return ReverseChunkEvaluator<RhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs > rhs.getOperand()));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename LhsT, typename RhsT>
+ReverseChunkEvaluator<LhsT> operator <=
+(
+    const LhsT& lhs,
+    const ReverseChunkEvaluator<RhsT>& rhs
+)
+{
+    rhs.getParent().append(" <= ");
+    return ReverseChunkEvaluator<RhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs <= rhs.getOperand()));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename LhsT, typename RhsT>
+ReverseChunkEvaluator<LhsT> operator >=
+(
+    const LhsT& lhs,
+    const ReverseChunkEvaluator<RhsT>& rhs
+)
+{
+    rhs.getParent().append(" >= ");
+    return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs >= rhs.getOperand()));
+}
     
 } // end namespace Catch
 
@@ -450,8 +811,8 @@ inline bool isTrue
 ///////////////////////////////////////////////////////////////////////////////
 #define INTERNAL_CATCH_TEST( expr, isNot, stopOnFailure, macroName ) \
     { \
-        Catch::Hub::getResultCapture().acceptExpression( Catch::ResultBuilder( #expr, isNot, __FILE__, __LINE__, macroName )->*expr ); \
-        INTERNAL_CATCH_ACCEPT_RESULT( expr, stopOnFailure ) \
+        Catch::Hub::getResultCapture().acceptExpression( Catch::ResultBuilder( #expr, isNot, __FILE__, __LINE__, macroName ) << expr << Catch::ReverseResultBuilder()); \
+        INTERNAL_CATCH_ACCEPT_RESULT( Catch::Hub::getResultCapture().getCurrentResult().getResultType() , stopOnFailure ) \
     }
 
 ///////////////////////////////////////////////////////////////////////////////

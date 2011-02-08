@@ -26,8 +26,7 @@ namespace Catch
         ()
         :   m_line( 0 ),
             m_result( ResultWas::Unknown ),
-            m_isNot( false ),
-            m_expressionIncomplete( false )
+            m_isNot( false )
         {}
         
         ///////////////////////////////////////////////////////////////////////////
@@ -44,10 +43,8 @@ namespace Catch
             m_filename( filename ),
             m_line( line ),
             m_expr( expr ),
-            m_op( m_expr[0] == '!' ? "!" : "" ),
             m_result( result ),
-            m_isNot( isNot ),
-            m_expressionIncomplete( false )
+            m_isNot( isNot )
         {
             if( isNot )
                 m_expr = "!" + m_expr;
@@ -100,10 +97,8 @@ namespace Catch
         {
             if( !hasExpression() )
                 return "";
-            
-            return m_expressionIncomplete
-                ? getExpandedExpressionInternal() + " {can't expand the rest of the expression - consider rewriting it}"
-                : getExpandedExpressionInternal();
+
+            return m_evaluatedExpr.empty() ? m_expr : m_evaluatedExpr;
         }
         
         ///////////////////////////////////////////////////////////////////////////
@@ -138,30 +133,59 @@ namespace Catch
             return m_macroName;
         }
 
+        ///////////////////////////////////////////////////////////////////////////
+        void setMessage
+        (
+            const std::string& message
+        )
+        {
+            m_message = message;
+        }
+
+        ///////////////////////////////////////////////////////////////////////////
+        void setResultType
+        (
+            ResultWas::OfType result
+        )
+        {
+            // Flip bool results if isNot is set
+            if( m_isNot && result == ResultWas::Ok )
+                m_result = ResultWas::ExpressionFailed;
+            else if( m_isNot && result == ResultWas::ExpressionFailed )
+                m_result = ResultWas::Ok;
+            else
+                m_result = result;
+        }
+
     protected:
 
         ///////////////////////////////////////////////////////////////////////////
-        std::string getExpandedExpressionInternal
-        ()
-        const
+        void setExpressionString
+        (
+            std::string exprString
+        )
         {
-            if( m_op == "" || m_isNot )
-                return m_lhs.empty() ? m_expr : m_op + m_lhs;
-            else if( m_op != "!" )
-                return m_lhs + " " + m_op + " " + m_rhs;
-            else
-                return "{can't expand - use " + m_macroName + "_NOT( " + m_expr.substr(1) + " ) instead of " + m_macroName + "( " + m_expr + " ) for better diagnostics}";
+            m_evaluatedExpr = exprString;
+        }
+
+        ///////////////////////////////////////////////////////////////////////////
+        void setResultData
+        (
+            bool resultData
+        )
+        {
+            setResultType(resultData ? ResultWas::Ok : ResultWas::ExpressionFailed); 
         }
         
-    protected:
+    private:
         std::string m_macroName;
         std::string m_filename;
         std::size_t m_line;
-        std::string m_expr, m_lhs, m_rhs, m_op;
+        std::string m_expr;
         std::string m_message;
         ResultWas::OfType m_result;
         bool m_isNot;
-        bool m_expressionIncomplete;
+        std::string m_evaluatedExpr;
     };
     
 } // end namespace Catch
