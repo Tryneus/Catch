@@ -174,7 +174,7 @@ namespace Catch
             bool resultData
         )
         {
-            setResultType(resultData ? ResultWas::Ok : ResultWas::ExpressionFailed); 
+            setResultType(resultData != m_isNot ? ResultWas::Ok : ResultWas::ExpressionFailed); 
         }
         
     private:
