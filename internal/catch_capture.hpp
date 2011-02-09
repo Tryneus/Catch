@@ -372,6 +372,7 @@ private:
 class ReverseResultBuilder
 {
 public:
+    ///////////////////////////////////////////////////////////////////////////
     void append
     (
         const std::string& exprChunk
@@ -380,6 +381,7 @@ public:
         m_exprString = exprChunk + m_exprString;
     }
 
+    ///////////////////////////////////////////////////////////////////////////
     const std::string& getExprString
     ()
     const
