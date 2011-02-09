@@ -390,7 +390,7 @@ class ReverseResultBuilder
 {
 public:
     ///////////////////////////////////////////////////////////////////////////
-    void append
+    void prepend
     (
         const std::string& exprChunk
     )
@@ -504,7 +504,7 @@ ReverseChunkEvaluator<RhsT>::ReverseChunkEvaluator
     m_result(result),
     m_known(known)
 {
-    m_parent.append( toString(operand) );
+    m_parent.prepend( toString(operand) );
 }
 
 // Terminal cases, where the chunk evaluators meet
@@ -764,7 +764,7 @@ ReverseChunkEvaluator<LhsT> operator ==
     const ReverseChunkEvaluator<RhsT>& rhs
 )
 {
-    rhs.getParent().append(" == ");
+    rhs.getParent().prepend(" == ");
     return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, (rhs.isKnown() || rhs.getResult()) && (lhs == rhs.getOperand()));
 }
 
@@ -776,7 +776,7 @@ ReverseChunkEvaluator<LhsT> operator !=
     const ReverseChunkEvaluator<RhsT>& rhs
 )
 {
-    rhs.getParent().append(" != ");
+    rhs.getParent().prepend(" != ");
     return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, (rhs.isKnown() || rhs.getResult()) && (lhs != rhs.getOperand()));
 }
 
@@ -788,7 +788,7 @@ ReverseChunkEvaluator<LhsT> operator <
     const ReverseChunkEvaluator<RhsT>& rhs
 )
 {
-    rhs.getParent().append(" < ");
+    rhs.getParent().prepend(" < ");
     return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, (rhs.isKnown() || rhs.getResult()) && (lhs < rhs.getOperand()));
 }
 
@@ -800,7 +800,7 @@ ReverseChunkEvaluator<LhsT> operator >
     const ReverseChunkEvaluator<RhsT>& rhs
 )
 {
-    rhs.getParent().append(" > ");
+    rhs.getParent().prepend(" > ");
     return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, (rhs.isKnown() || rhs.getResult()) && (lhs > rhs.getOperand()));
 }
 
@@ -812,7 +812,7 @@ ReverseChunkEvaluator<LhsT> operator <=
     const ReverseChunkEvaluator<RhsT>& rhs
 )
 {
-    rhs.getParent().append(" <= ");
+    rhs.getParent().prepend(" <= ");
     return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, (rhs.isKnown() || rhs.getResult()) && (lhs <= rhs.getOperand()));
 }
 
@@ -824,10 +824,10 @@ ReverseChunkEvaluator<LhsT> operator >=
     const ReverseChunkEvaluator<RhsT>& rhs
 )
 {
-    rhs.getParent().append(" >= ");
+    rhs.getParent().prepend(" >= ");
     return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, (rhs.isKnown() || rhs.getResult()) && (lhs >= rhs.getOperand()));
 }
-    
+
 } // end namespace Catch
 
 ///////////////////////////////////////////////////////////////////////////////
