@@ -260,7 +260,7 @@ inline bool isTrue
 class ResultBuilder;
 class ReverseResultBuilder;
 
-template<typename OperandT>
+template<typename RhsT>
 class ReverseChunkEvaluator
 {
 public:
@@ -268,12 +268,12 @@ public:
     ReverseChunkEvaluator
     (
         const ReverseResultBuilder& parent,
-        const OperandT& operand,
+        const RhsT& operand,
         bool result
     );
 
     ///////////////////////////////////////////////////////////////////////////
-    const OperandT& getOperand
+    const RhsT& getOperand
     ()
     const
     {
@@ -297,17 +297,17 @@ public:
     }
 
 private:
-    const OperandT& m_operand;
+    const RhsT& m_operand;
     ReverseResultBuilder& m_parent;
     bool m_result;
 };
 
-template<typename OperandT>
+template<typename LhsT>
 class ChunkEvaluator
 {
 public:
     // These functions are implemented following the ResultBuilder definition
-    ChunkEvaluator(ResultBuilder& parent, const OperandT& operand, bool result);
+    ChunkEvaluator(ResultBuilder& parent, const LhsT& operand, bool result);
 
     // Terminal cases
     ResultBuilder& operator << ( const ReverseResultBuilder& rhs );
@@ -364,7 +364,7 @@ public:
     operator ResultBuilder&();
 
 private:
-    const OperandT& m_operand;
+    const LhsT& m_operand;
     ResultBuilder& m_parent;
     bool m_result;
 };
@@ -458,12 +458,12 @@ private:
 // Chunk evaluator function definitions are outside the class since they make callbacks to the ResultBuilders
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename OperandT>
-ChunkEvaluator<OperandT>::ChunkEvaluator
+template<typename LhsT>
+ChunkEvaluator<LhsT>::ChunkEvaluator
 (
-ResultBuilder& parent,
- const OperandT& operand,
- bool result
+    ResultBuilder& parent,
+    const LhsT& operand,
+    bool result
 ) :
     m_operand(operand),
     m_parent(parent),
@@ -473,12 +473,12 @@ ResultBuilder& parent,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename OperandT>
-ReverseChunkEvaluator<OperandT>::ReverseChunkEvaluator
+template<typename RhsT>
+ReverseChunkEvaluator<RhsT>::ReverseChunkEvaluator
 (
-const ReverseResultBuilder& parent,
- const OperandT& operand,
- bool result
+    const ReverseResultBuilder& parent,
+    const RhsT& operand,
+    bool result
 ) :
     m_operand(operand),
     m_parent(const_cast<ReverseResultBuilder&>(parent)), // Don't do this at home, kids
@@ -490,8 +490,8 @@ const ReverseResultBuilder& parent,
 //Terminal cases, where the chunk evaluators meet
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename OperandT>
-ChunkEvaluator<OperandT>::operator ResultBuilder&
+template<typename LhsT>
+ChunkEvaluator<LhsT>::operator ResultBuilder&
 ()
 {
   m_parent.setResult(m_result, "");
@@ -499,8 +499,8 @@ ChunkEvaluator<OperandT>::operator ResultBuilder&
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename OperandT>
-ResultBuilder& ChunkEvaluator<OperandT>::operator <<
+template<typename LhsT>
+ResultBuilder& ChunkEvaluator<LhsT>::operator <<
 (
     const ReverseResultBuilder& rhs
 )
@@ -511,22 +511,22 @@ ResultBuilder& ChunkEvaluator<OperandT>::operator <<
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename OperandT>
+template<typename LhsT>
 template<typename RhsT>
-ResultBuilder& ChunkEvaluator<OperandT>::operator ==
+ResultBuilder& ChunkEvaluator<LhsT>::operator ==
 (
     const ReverseChunkEvaluator<RhsT>& rhs
 )
 {
     m_parent.append(" == ");
-    m_parent.setResult(m_result == rhs.getResult(), rhs.getParent().getExprString());
+    m_parent.setResult(m_operand == rhs.getOperand(), rhs.getParent().getExprString());
     return m_parent;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename OperandT>
+template<typename LhsT>
 template<typename RhsT>
-ResultBuilder& ChunkEvaluator<OperandT>::operator !=
+ResultBuilder& ChunkEvaluator<LhsT>::operator !=
 (
     const ReverseChunkEvaluator<RhsT>& rhs
 )
@@ -537,9 +537,9 @@ ResultBuilder& ChunkEvaluator<OperandT>::operator !=
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename OperandT>
+template<typename LhsT>
 template<typename RhsT>
-ResultBuilder& ChunkEvaluator<OperandT>::operator <
+ResultBuilder& ChunkEvaluator<LhsT>::operator <
 (
     const ReverseChunkEvaluator<RhsT>& rhs
 )
@@ -550,9 +550,9 @@ ResultBuilder& ChunkEvaluator<OperandT>::operator <
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename OperandT>
+template<typename LhsT>
 template<typename RhsT>
-ResultBuilder& ChunkEvaluator<OperandT>::operator >
+ResultBuilder& ChunkEvaluator<LhsT>::operator >
 (
     const ReverseChunkEvaluator<RhsT>& rhs
 )
@@ -563,9 +563,9 @@ ResultBuilder& ChunkEvaluator<OperandT>::operator >
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename OperandT>
+template<typename LhsT>
 template<typename RhsT>
-ResultBuilder& ChunkEvaluator<OperandT>::operator <=
+ResultBuilder& ChunkEvaluator<LhsT>::operator <=
 (
     const ReverseChunkEvaluator<RhsT>& rhs
 )
@@ -576,9 +576,9 @@ ResultBuilder& ChunkEvaluator<OperandT>::operator <=
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename OperandT>
+template<typename LhsT>
 template<typename RhsT>
-ResultBuilder& ChunkEvaluator<OperandT>::operator >=
+ResultBuilder& ChunkEvaluator<LhsT>::operator >=
 (
     const ReverseChunkEvaluator<RhsT>& rhs
 )
@@ -589,9 +589,9 @@ ResultBuilder& ChunkEvaluator<OperandT>::operator >=
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename OperandT>
+template<typename LhsT>
 template<typename RhsT>
-ResultBuilder& ChunkEvaluator<OperandT>::operator ||
+ResultBuilder& ChunkEvaluator<LhsT>::operator ||
 (
     const ReverseChunkEvaluator<RhsT>& rhs
 )
@@ -602,9 +602,9 @@ ResultBuilder& ChunkEvaluator<OperandT>::operator ||
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename OperandT>
+template<typename LhsT>
 template<typename RhsT>
-ResultBuilder& ChunkEvaluator<OperandT>::operator &&
+ResultBuilder& ChunkEvaluator<LhsT>::operator &&
 (
     const ReverseChunkEvaluator<RhsT>& rhs
 )
@@ -617,9 +617,9 @@ ResultBuilder& ChunkEvaluator<OperandT>::operator &&
 // Operators for consuming from the left (forward chunk evaluation)
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename OperandT>
+template<typename LhsT>
 template<typename RhsT>
-ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator ||
+ChunkEvaluator<RhsT> ChunkEvaluator<LhsT>::operator ||
 (
     const RhsT& rhs
 )
@@ -630,9 +630,9 @@ ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator ||
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename OperandT>
+template<typename LhsT>
 template<typename RhsT>
-ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator &&
+ChunkEvaluator<RhsT> ChunkEvaluator<LhsT>::operator &&
 (
     const RhsT& rhs
 )
@@ -643,9 +643,9 @@ ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator &&
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename OperandT>
+template<typename LhsT>
 template<typename RhsT>
-ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator ==
+ChunkEvaluator<RhsT> ChunkEvaluator<LhsT>::operator ==
 (
     const RhsT& rhs
 )
@@ -655,9 +655,9 @@ ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator ==
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename OperandT>
+template<typename LhsT>
 template<typename RhsT>
-ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator !=
+ChunkEvaluator<RhsT> ChunkEvaluator<LhsT>::operator !=
 (
     const RhsT& rhs
 )
@@ -667,9 +667,9 @@ ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator !=
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename OperandT>
+template<typename LhsT>
 template<typename RhsT>
-ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator <
+ChunkEvaluator<RhsT> ChunkEvaluator<LhsT>::operator <
 (
     const RhsT& rhs
 )
@@ -679,9 +679,9 @@ ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator <
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename OperandT>
+template<typename LhsT>
 template<typename RhsT>
-ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator >
+ChunkEvaluator<RhsT> ChunkEvaluator<LhsT>::operator >
 (
     const RhsT& rhs
 )
@@ -691,9 +691,9 @@ ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator >
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename OperandT>
+template<typename LhsT>
 template<typename RhsT>
-ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator <=
+ChunkEvaluator<RhsT> ChunkEvaluator<LhsT>::operator <=
 (
     const RhsT& rhs
 )
@@ -703,9 +703,9 @@ ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator <=
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename OperandT>
+template<typename LhsT>
 template<typename RhsT>
-ChunkEvaluator<RhsT> ChunkEvaluator<OperandT>::operator >=
+ChunkEvaluator<RhsT> ChunkEvaluator<LhsT>::operator >=
 (
     const RhsT& rhs
 )
