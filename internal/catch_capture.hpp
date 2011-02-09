@@ -608,9 +608,15 @@ ResultBuilder& ChunkEvaluator<LhsT>::operator ||
     const ReverseChunkEvaluator<RhsT>& rhs
 )
 {
-    if(!m_known) m_result = m_operand;
     m_parent.append(" || " + rhs.getParent().getExprString());
-    m_parent.setResult(m_result || rhs.getResult());
+
+    if(!m_known) m_result = m_operand;
+
+    if(rhs.isKnown())
+        m_parent.setResult(m_result || rhs.getResult());
+    else
+        m_parent.setResult(m_result || rhs.getOperand());
+
     return m_parent;
 }
 
@@ -622,9 +628,15 @@ ResultBuilder& ChunkEvaluator<LhsT>::operator &&
     const ReverseChunkEvaluator<RhsT>& rhs
 )
 {
-    if(!m_known) m_result = m_operand;
     m_parent.append(" && " + rhs.getParent().getExprString());
-    m_parent.setResult(m_result && rhs.getResult());
+
+    if(!m_known) m_result = m_operand;
+
+    if(rhs.isKnown())
+        m_parent.setResult(m_result && rhs.getResult());
+    else
+        m_parent.setResult(m_result && rhs.getOperand());
+
     return m_parent;
 }
 
