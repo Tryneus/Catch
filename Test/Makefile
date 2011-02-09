@@ -4,7 +4,7 @@ INCLUDE_DIRS :=$(subst -I,,$(INCLUDE_FLAGS))
 HEADER_FILES :=$(shell find $(INCLUDE_DIRS) -name '*.h*')
 
 COMPILE_FLAGS:=-c -Wall -Wextra -O3 -g $(INCLUDE_FLAGS)
-LINKER_FLAGS :=-L/usr/lib/gcc/i486-linux-gnu/4.3.2/ -lrt -lstdc++
+LINKER_FLAGS :=-lstdc++
 
 BINARY_DIR   :=../bin
 BINARY_FILE  :=$(BINARY_DIR)/catchTest
