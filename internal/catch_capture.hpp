@@ -736,8 +736,9 @@ ReverseChunkEvaluator<LhsT> operator ==
     const ReverseChunkEvaluator<RhsT>& rhs
 )
 {
+    bool res = lhs == rhs.getOperand();
     rhs.getParent().append(" == ");
-    return ReverseChunkEvaluator<RhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs == rhs.getOperand()));
+    return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, rhs.getResult() && res);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -749,7 +750,7 @@ ReverseChunkEvaluator<LhsT> operator !=
 )
 {
     rhs.getParent().append(" != ");
-    return ReverseChunkEvaluator<RhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs != rhs.getOperand()));
+    return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs != rhs.getOperand()));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -761,7 +762,7 @@ ReverseChunkEvaluator<LhsT> operator <
 )
 {
     rhs.getParent().append(" < ");
-    return ReverseChunkEvaluator<RhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs < rhs.getOperand()));
+    return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs < rhs.getOperand()));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -773,7 +774,7 @@ ReverseChunkEvaluator<LhsT> operator >
 )
 {
     rhs.getParent().append(" > ");
-    return ReverseChunkEvaluator<RhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs > rhs.getOperand()));
+    return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs > rhs.getOperand()));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -785,7 +786,7 @@ ReverseChunkEvaluator<LhsT> operator <=
 )
 {
     rhs.getParent().append(" <= ");
-    return ReverseChunkEvaluator<RhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs <= rhs.getOperand()));
+    return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs <= rhs.getOperand()));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
