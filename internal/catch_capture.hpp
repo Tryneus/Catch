@@ -736,9 +736,8 @@ ReverseChunkEvaluator<LhsT> operator ==
     const ReverseChunkEvaluator<RhsT>& rhs
 )
 {
-    bool res = lhs == rhs.getOperand();
     rhs.getParent().append(" == ");
-    return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, rhs.getResult() && res);
+    return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs == rhs.getOperand()));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
