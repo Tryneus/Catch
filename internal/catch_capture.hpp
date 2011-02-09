@@ -543,7 +543,7 @@ ResultBuilder& ChunkEvaluator<LhsT>::operator !=
     const ReverseChunkEvaluator<RhsT>& rhs
 )
 {
-    m_parent.append(" != " + rhs.getExprString());
+    m_parent.append(" != " + rhs.getParent().getExprString());
     m_parent.setResult((m_known || m_result) && m_operand != rhs.getOperand());
     return m_parent;
 }
@@ -871,7 +871,7 @@ catch( ... ) \
     { \
         std::ostringstream INTERNAL_CATCH_UNIQUE_NAME( strm ); \
         INTERNAL_CATCH_UNIQUE_NAME( strm ) << reason; \
-        Catch::Hub::getResultCapture().acceptExpression( Catch::MutableResultInfo( "", false, __FILE__, __LINE__, macroName ) ); \
+        Catch::Hub::getResultCapture().acceptExpression( Catch::ResultInfo( "", Catch::ResultWas::Unknown, false, __FILE__, __LINE__, macroName ) ); \
         Catch::Hub::getResultCapture().acceptMessage( INTERNAL_CATCH_UNIQUE_NAME( strm ).str() ); \
         INTERNAL_CATCH_ACCEPT_RESULT( resultType, stopOnFailure ) \
     }
