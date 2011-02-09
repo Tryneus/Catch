@@ -45,7 +45,7 @@ TEST_CASE( "./succeeding/Tricky/complex lhs", "Where the LHS is not a simple val
 struct Opaque
 {
     int val;
-    bool operator ==( const Opaque& o )
+    bool operator ==( const Opaque& o ) const
     {
         return val == o.val;
     }
