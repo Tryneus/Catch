@@ -269,7 +269,8 @@ public:
     (
         const ReverseResultBuilder& parent,
         const RhsT& operand,
-        bool result
+        bool result,
+        bool known = true
     );
 
     ///////////////////////////////////////////////////////////////////////////
@@ -296,18 +297,33 @@ public:
         return m_result;
     }
 
+    ///////////////////////////////////////////////////////////////////////////
+    bool isKnown
+    ()
+    const
+    {
+        return m_known;
+    }
+
 private:
     const RhsT& m_operand;
     ReverseResultBuilder& m_parent;
     bool m_result;
+    bool m_known;
 };
 
 template<typename LhsT>
 class ChunkEvaluator
 {
 public:
-    // These functions are implemented following the ResultBuilder definition
-    ChunkEvaluator(ResultBuilder& parent, const LhsT& operand, bool result);
+    ///////////////////////////////////////////////////////////////////////////
+    ChunkEvaluator
+    (
+        ResultBuilder& parent,
+        const LhsT& operand,
+        bool result,
+        bool known = true
+    );
 
     // Terminal cases
     ResultBuilder& operator << ( const ReverseResultBuilder& rhs );
@@ -367,6 +383,7 @@ private:
     const LhsT& m_operand;
     ResultBuilder& m_parent;
     bool m_result;
+    bool m_known;
 };
 
 class ReverseResultBuilder
@@ -416,7 +433,7 @@ public:
         const LhsT& lhs
     )
     {
-        return ChunkEvaluator<LhsT>(*this, lhs, true);
+        return ChunkEvaluator<LhsT>(*this, lhs, true, false);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -429,16 +446,15 @@ public:
     ///////////////////////////////////////////////////////////////////////////
     void setResult
     (
-        bool exprResult,
-        const std::string& reverseExprString
+        bool exprResult
     )
     {
         setResultData(exprResult);
 
         if(!m_incomplete)
-          setExpressionString(m_exprString + reverseExprString);
+          setExpressionString(m_exprString);
         else
-          setExpressionString(m_exprString + reverseExprString + " {can't expand the rest of the expression - consider rewriting it}");
+          setExpressionString(m_exprString + " {can't expand the rest of the expression - consider rewriting it}");
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -463,11 +479,13 @@ ChunkEvaluator<LhsT>::ChunkEvaluator
 (
     ResultBuilder& parent,
     const LhsT& operand,
-    bool result
-) :
-    m_operand(operand),
+    bool result,
+    bool known
+)
+  : m_operand(operand),
     m_parent(parent),
-    m_result(result)
+    m_result(result),
+    m_known(known)
 {
     m_parent.append( toString(operand) );
 }
@@ -478,25 +496,18 @@ ReverseChunkEvaluator<RhsT>::ReverseChunkEvaluator
 (
     const ReverseResultBuilder& parent,
     const RhsT& operand,
-    bool result
-) :
-    m_operand(operand),
+    bool result,
+    bool known
+)
+  : m_operand(operand),
     m_parent(const_cast<ReverseResultBuilder&>(parent)), // Don't do this at home, kids
-    m_result(result)
+    m_result(result),
+    m_known(known)
 {
     m_parent.append( toString(operand) );
 }
 
-//Terminal cases, where the chunk evaluators meet
-
-///////////////////////////////////////////////////////////////////////////////
-template<typename LhsT>
-ChunkEvaluator<LhsT>::operator ResultBuilder&
-()
-{
-  m_parent.setResult(m_result, "");
-  return m_parent;
-}
+// Terminal cases, where the chunk evaluators meet
 
 ///////////////////////////////////////////////////////////////////////////////
 template<typename LhsT>
@@ -505,8 +516,9 @@ ResultBuilder& ChunkEvaluator<LhsT>::operator <<
     const ReverseResultBuilder& rhs
 )
 {
-    // rhs is unused because if we hit this operator, rhs never did anything
-    m_parent.setResult(m_result, rhs.getExprString());
+    if(!m_known) m_result = m_operand;
+    m_parent.append(rhs.getExprString());
+    m_parent.setResult(m_result);
     return m_parent;
 }
 
@@ -518,8 +530,8 @@ ResultBuilder& ChunkEvaluator<LhsT>::operator ==
     const ReverseChunkEvaluator<RhsT>& rhs
 )
 {
-    m_parent.append(" == ");
-    m_parent.setResult(m_operand == rhs.getOperand(), rhs.getParent().getExprString());
+    m_parent.append(" == " + rhs.getParent().getExprString());
+    m_parent.setResult((m_known || m_result) && m_operand == rhs.getOperand());
     return m_parent;
 }
 
@@ -531,8 +543,8 @@ ResultBuilder& ChunkEvaluator<LhsT>::operator !=
     const ReverseChunkEvaluator<RhsT>& rhs
 )
 {
-    m_parent.append(" != ");
-    m_parent.setResult(m_result != rhs.getResult(), rhs.getParent().getExprString());
+    m_parent.append(" != " + rhs.getExprString());
+    m_parent.setResult((m_known || m_result) && m_operand != rhs.getOperand());
     return m_parent;
 }
 
@@ -544,8 +556,8 @@ ResultBuilder& ChunkEvaluator<LhsT>::operator <
     const ReverseChunkEvaluator<RhsT>& rhs
 )
 {
-    m_parent.append(" < ");
-    m_parent.setResult(m_result < rhs.getResult(), rhs.getParent().getExprString());
+    m_parent.append(" < " + rhs.getParent().getExprString());
+    m_parent.setResult((m_known || m_result) && m_operand < rhs.getOperand());
     return m_parent;
 }
 
@@ -557,8 +569,8 @@ ResultBuilder& ChunkEvaluator<LhsT>::operator >
     const ReverseChunkEvaluator<RhsT>& rhs
 )
 {
-    m_parent.append(" > ");
-    m_parent.setResult(m_result > rhs.getResult(), rhs.getParent().getExprString());
+    m_parent.append(" > " + rhs.getParent().getExprString());
+    m_parent.setResult((m_known || m_result) && m_operand > rhs.getOperand());
     return m_parent;
 }
 
@@ -570,8 +582,8 @@ ResultBuilder& ChunkEvaluator<LhsT>::operator <=
     const ReverseChunkEvaluator<RhsT>& rhs
 )
 {
-    m_parent.append(" <= ");
-    m_parent.setResult(m_result <= rhs.getResult(), rhs.getParent().getExprString());
+    m_parent.append(" <= " + rhs.getParent().getExprString());
+    m_parent.setResult((m_known || m_result) && m_operand <= rhs.getOperand());
     return m_parent;
 }
 
@@ -583,8 +595,8 @@ ResultBuilder& ChunkEvaluator<LhsT>::operator >=
     const ReverseChunkEvaluator<RhsT>& rhs
 )
 {
-    m_parent.append(" >= ");
-    m_parent.setResult(m_result >= rhs.getResult(), rhs.getParent().getExprString());
+    m_parent.append(" >= " + rhs.getParent().getExprString());
+    m_parent.setResult((m_known || m_result) && (m_operand >= rhs.getOperand()));
     return m_parent;
 }
 
@@ -596,8 +608,9 @@ ResultBuilder& ChunkEvaluator<LhsT>::operator ||
     const ReverseChunkEvaluator<RhsT>& rhs
 )
 {
-    m_parent.append(" || ");
-    m_parent.setResult(m_result || rhs.getResult(), rhs.getParent().getExprString());
+    if(!m_known) m_result = m_operand;
+    m_parent.append(" || " + rhs.getParent().getExprString());
+    m_parent.setResult(m_result || rhs.getResult());
     return m_parent;
 }
 
@@ -609,8 +622,9 @@ ResultBuilder& ChunkEvaluator<LhsT>::operator &&
     const ReverseChunkEvaluator<RhsT>& rhs
 )
 {
-    m_parent.append(" && ");
-    m_parent.setResult(m_result && rhs.getResult(), rhs.getParent().getExprString());
+    if(!m_known) m_result = m_operand;
+    m_parent.append(" && " + rhs.getParent().getExprString());
+    m_parent.setResult(m_result && rhs.getResult());
     return m_parent;
 }
 
@@ -624,6 +638,7 @@ ChunkEvaluator<RhsT> ChunkEvaluator<LhsT>::operator ||
     const RhsT& rhs
 )
 {
+    if(!m_known) m_result = m_operand;
     m_parent.append(" || ");
     m_parent.setIncomplete();
     return ChunkEvaluator<RhsT>(m_parent, rhs, m_result || rhs);
@@ -637,6 +652,7 @@ ChunkEvaluator<RhsT> ChunkEvaluator<LhsT>::operator &&
     const RhsT& rhs
 )
 {
+    if(!m_known) m_result = m_operand;
     m_parent.append(" && ");
     m_parent.setIncomplete();
     return ChunkEvaluator<RhsT>(m_parent, rhs, m_result && rhs);
@@ -651,7 +667,7 @@ ChunkEvaluator<RhsT> ChunkEvaluator<LhsT>::operator ==
 )
 {
     m_parent.append(" == ");
-    return ChunkEvaluator<RhsT>(m_parent, rhs, m_result && (m_operand == rhs));
+    return ChunkEvaluator<RhsT>(m_parent, rhs, (m_known || m_result) && (m_operand == rhs));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -663,7 +679,7 @@ ChunkEvaluator<RhsT> ChunkEvaluator<LhsT>::operator !=
 )
 {
     m_parent.append(" != ");
-    return ChunkEvaluator<RhsT>(m_parent, rhs, m_result && (m_operand != rhs));
+    return ChunkEvaluator<RhsT>(m_parent, rhs, (m_known || m_result) && (m_operand != rhs));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -675,7 +691,7 @@ ChunkEvaluator<RhsT> ChunkEvaluator<LhsT>::operator <
 )
 {
     m_parent.append(" < ");
-    return ChunkEvaluator<RhsT>(m_parent, rhs, m_result && (m_operand < rhs));
+    return ChunkEvaluator<RhsT>(m_parent, rhs, (m_known || m_result) && (m_operand < rhs));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -687,7 +703,7 @@ ChunkEvaluator<RhsT> ChunkEvaluator<LhsT>::operator >
 )
 {
     m_parent.append(" > ");
-    return ChunkEvaluator<RhsT>(m_parent, rhs, m_result && (m_operand > rhs));
+    return ChunkEvaluator<RhsT>(m_parent, rhs, (m_known || m_result) && (m_operand > rhs));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -699,7 +715,7 @@ ChunkEvaluator<RhsT> ChunkEvaluator<LhsT>::operator <=
 )
 {
     m_parent.append(" <= ");
-    return ChunkEvaluator<RhsT>(m_parent, rhs, m_result && (m_operand <= rhs));
+    return ChunkEvaluator<RhsT>(m_parent, rhs, (m_known || m_result) && (m_operand <= rhs));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -711,7 +727,7 @@ ChunkEvaluator<RhsT> ChunkEvaluator<LhsT>::operator >=
 )
 {
     m_parent.append(" >= ");
-    return ChunkEvaluator<RhsT>(m_parent, rhs, m_result && (m_operand >= rhs));
+    return ChunkEvaluator<RhsT>(m_parent, rhs, (m_known || m_result) && (m_operand >= rhs));
 }
 
 // Operators for consuming from the right (reverse chunk evaluaton)
@@ -725,7 +741,7 @@ ReverseChunkEvaluator<RhsT> operator <<
     const ReverseResultBuilder& rev
 )
 {
-    return ReverseChunkEvaluator<RhsT>(rev, rhs, true);
+    return ReverseChunkEvaluator<RhsT>(rev, rhs, true, false);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -737,7 +753,7 @@ ReverseChunkEvaluator<LhsT> operator ==
 )
 {
     rhs.getParent().append(" == ");
-    return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs == rhs.getOperand()));
+    return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, (rhs.isKnown() || rhs.getResult()) && (lhs == rhs.getOperand()));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -749,7 +765,7 @@ ReverseChunkEvaluator<LhsT> operator !=
 )
 {
     rhs.getParent().append(" != ");
-    return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs != rhs.getOperand()));
+    return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, (rhs.isKnown() || rhs.getResult()) && (lhs != rhs.getOperand()));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -761,7 +777,7 @@ ReverseChunkEvaluator<LhsT> operator <
 )
 {
     rhs.getParent().append(" < ");
-    return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs < rhs.getOperand()));
+    return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, (rhs.isKnown() || rhs.getResult()) && (lhs < rhs.getOperand()));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -773,7 +789,7 @@ ReverseChunkEvaluator<LhsT> operator >
 )
 {
     rhs.getParent().append(" > ");
-    return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs > rhs.getOperand()));
+    return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, (rhs.isKnown() || rhs.getResult()) && (lhs > rhs.getOperand()));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -785,7 +801,7 @@ ReverseChunkEvaluator<LhsT> operator <=
 )
 {
     rhs.getParent().append(" <= ");
-    return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs <= rhs.getOperand()));
+    return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, (rhs.isKnown() || rhs.getResult()) && (lhs <= rhs.getOperand()));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -797,7 +813,7 @@ ReverseChunkEvaluator<LhsT> operator >=
 )
 {
     rhs.getParent().append(" >= ");
-    return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, rhs.getResult() && (lhs >= rhs.getOperand()));
+    return ReverseChunkEvaluator<LhsT>(rhs.getParent(), lhs, (rhs.isKnown() || rhs.getResult()) && (lhs >= rhs.getOperand()));
 }
     
 } // end namespace Catch
