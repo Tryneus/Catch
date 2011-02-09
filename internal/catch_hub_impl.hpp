@@ -27,6 +27,17 @@ namespace Catch
     }
 
     ///////////////////////////////////////////////////////////////////////////
+    Hub::~Hub
+    ()
+    {
+        while(!m_generatorsByTestName.empty())
+        {
+            delete m_generatorsByTestName.begin()->second;
+            m_generatorsByTestName.erase(m_generatorsByTestName.begin());
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
     Hub& Hub::me
     ()
     {

@@ -33,6 +33,8 @@ namespace Catch
     class Hub
     {
         Hub();
+
+        ~Hub();
         
         static Hub& me();
         
